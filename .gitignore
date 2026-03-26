@@ -1,0 +1,6 @@
+.env
+node_modules/
+data/
+*.tar.gz
+video_results.json
+avatars_list.json

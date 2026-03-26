@@ -1,3 +1,59 @@
+# WiseTribes — Master Rules (Root CLAUDE.md)
+
+Read this before doing ANYTHING across any WiseTribes project.
+These rules override everything else.
+
+## Company
+- Product: WiseTribes — AI learning for Class 5–10, India
+- Founder: Kajol Pandey | info@wisetribes.in | +918793015698
+- Instagram: @wisetribes_26
+
+## The offer — never change this without explicit command
+- ONE price only: ₹6,000/month
+- 2 live AI classes/week — Tuesday + Friday
+- Classes start April 15, 2025
+- No ₹2,500. No ₹12,000. No other pricing. Ever.
+
+## The funnel — never deviate
+1. Lead → wisetribes.online
+2. Free AI Assessment (8 questions, 2 min)
+3. 15-min Demo Class auto-starts instantly after assessment
+4. Offer: ₹6,000/month
+5. Paid → email confirmation + schedule
+6. Not paid → WhatsApp nurture (3 touches: Day 1, Day 3, Day 7)
+
+## Domain — LOCKED
+- Active domain: wisetribes.online
+- Production domain: wisetribes.in
+- DO NOT switch to wisetribes.in unless Kajol says exactly: "switch to production domain"
+- Every file, every agent, every email uses wisetribes.online until that command
+
+## Non-negotiable rules
+- Never change pricing
+- Never create new pages on the website
+- Never change website design, colors, fonts, layout
+- Never touch the assessment tool on the website
+- All 7 agent prompts live in agents.js — edit there only
+- After every website change: commit + push to main branch
+- After every agent change: restart PM2 on VPS
+- Never expose API keys in code or commits
+- GitHub token and API keys stay in .env only
+
+## Projects in this workspace
+- website/ → wisetribes.online source code
+- wisetribes-agent/ → autonomous AI marketing team (Node.js, VPS)
+- heygen-videos/ → demo class video generation
+- classes/ → AI-delivered Tuesday/Friday classes (future project)
+
+## When Kajol gives a task
+1. Read the relevant sub-project CLAUDE.md
+2. Do the task completely
+3. Report what was done
+4. Never ask "should I proceed" — just do it
+5. Never leave tasks half-done
+
+---
+
 # WiseTribes — Claude Code Project Brief
 
 You are working on the WiseTribes autonomous AI marketing system.
