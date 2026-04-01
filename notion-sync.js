@@ -10,19 +10,19 @@ const headers = {
   'Content-Type': 'application/json'
 };
 
-// Notion page mapping - all pages
+// Notion page mapping - all pages (under Week 1)
 const PAGE_MAP = {
-  '00-CREATOR-BRIEF.md':   '335133c5-aab8-81d3-89da-e9d751b33674',  // CREATOR BRIEF
+  '00-CREATOR-BRIEF.md':   '335133c5-aab8-814a-93d5-f0120f54b627',  // CREATOR BRIEF
   '01-WEEKLY-CALENDAR.md': '330133c5-aab8-81bb-a17c-d3b112247b89',  // WEEK 1 - Ready to Post
-  '02-SCRIPTS.md':         '330133c5-aab8-81bb-a17c-d3b112247b89',  // Scripts
+  '02-SCRIPTS.md':         '335133c5-aab8-81c5-a873-d452cdcd6467',  // Script Library
   '03-COMMAND-CENTER.md':  '330133c5-aab8-81dc-a6f0-d40e873068d5',  // Command Center
   '04-AGENT-SYSTEM.md':    '330133c5-aab8-81df-809d-ed6c17d7de7a',  // Agent System
   '05-ORGANIC-CONTENT.md': '330133c5-aab8-8188-bab4-ec2abba1fb78',  // Organic Content Strategy
-  '06-CONTENT-STRATEGY.md':'335133c5-aab8-81c8-abd2-e303ccd54a85', // Content Strategy
-  '07-N8N-WORKFLOWS.md':   '335133c5-aab8-815e-b9db-fc98a11307e6',  // n8n Workflows
-  '08-WHATSAPP-TEMPLATES.md':'335133c5-aab8-814c-bf41-f309acfcc0d1', // WhatsApp Templates
-  '09-STORY-TEMPLATES.md': '335133c5-aab8-8167-a998-d44bd1cad98c',  // Story Templates
-  '10-EMAIL-TEMPLATES.md': '335133c5-aab8-814d-a852-cf61781545fc',  // Email Templates
+  '06-CONTENT-STRATEGY.md':'335133c5-aab8-810c-a976-ef057d9d20b0', // Content Strategy
+  '07-N8N-WORKFLOWS.md':   '335133c5-aab8-81ac-9fc4-f812a8c2201f',  // N8N Workflows
+  '08-WHATSAPP-TEMPLATES.md':'335133c5-aab8-81e7-ba81-e57c0e044619', // WhatsApp Templates
+  '09-STORY-TEMPLATES.md': '335133c5-aab8-8155-90b1-d87f48a4d781',  // Story Templates
+  '10-EMAIL-TEMPLATES.md': '335133c5-aab8-81c9-b4bc-ca7256d374e0',  // Email Templates
   '11-BRAND-KIT.md':       '330133c5-aab8-81fd-956b-ef069dfa0f61',  // Brand Kit
 };
 
