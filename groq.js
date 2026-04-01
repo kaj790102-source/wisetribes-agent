@@ -4,12 +4,14 @@ const axios = require('axios');
 const GROQ_BASE = 'https://api.groq.com/openai/v1';
 
 const MODELS = {
-  'llama-3.1-70b': { name: 'Llama 3.1 70B', context: 131072, speed: 'fastest' },
-  'llama-3.1-8b': { name: 'Llama 3.1 8B', context: 131072, speed: 'fast' },
-  'mixtral-8x7b': { name: 'Mixtral 8x7B', context: 32768, speed: 'fast' }
+  'llama-3.3-70b-versatile': { name: 'Llama 3.3 70B', context: 131072, speed: 'fastest' },
+  'llama-3.1-8b-instant': { name: 'Llama 3.1 8B', context: 131072, speed: 'fast' },
+  'mixtral-8x7b-32768': { name: 'Mixtral 8x7B', context: 32768, speed: 'fast' },
+  'llama-3.2-1b-preview': { name: 'Llama 3.2 1B', context: 131072, speed: 'fastest' },
+  'llama-3.2-3b-preview': { name: 'Llama 3.2 3B', context: 131072, speed: 'fast' }
 };
 
-const DEFAULT_MODEL = 'llama-3.1-70b';
+const DEFAULT_MODEL = 'llama-3.3-70b-versatile';
 
 async function complete(options) {
   const {
@@ -37,7 +39,7 @@ async function complete(options) {
         messages: formattedMessages,
         max_tokens,
         temperature,
-        response_format: { type: 'json_object' }
+        response_format: undefined
       },
       {
         headers: {
