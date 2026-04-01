@@ -24,6 +24,7 @@ const PAGE_MAP = {
   '09-STORY-TEMPLATES.md': '335133c5-aab8-8155-90b1-d87f48a4d781',  // Story Templates
   '10-EMAIL-TEMPLATES.md': '335133c5-aab8-81c9-b4bc-ca7256d374e0',  // Email Templates
   '11-BRAND-KIT.md':       '330133c5-aab8-81fd-956b-ef069dfa0f61',  // Brand Kit
+  'VIDEO-EDITOR-WORKFLOW.md': '335133c5-aab8-8161-adf3-c106d16a1bc4', // Video Editor Workflow
 };
 
 async function updateNotionPage(pageId, content, title) {

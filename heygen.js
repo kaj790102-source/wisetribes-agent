@@ -1,99 +1,116 @@
 require('dotenv').config();
 const axios = require('axios');
 
-const HEYGEN_BASE = 'https://api.heygen.com';
+const HEYGEN_KEY = process.env.HEYGEN_API_KEY;
+const AVATAR_ID = process.env.HEYGEN_AVATAR_ID || 'Abigail_expressive_2024112501';
 
-async function submitVideo(heygenBrief) {
-  if (!process.env.HEYGEN_API_KEY) {
-    console.warn('[HeyGen] No API key — skipping video generation');
-    return { id: 'mock_video_id', status: 'skipped' };
-  }
+async function generateVideo(script, options = {}) {
+  const {
+    title = 'WiseTribes Video',
+    duration = 60
+  } = options;
 
-  // Build HeyGen video generation payload
-  const scenes = heygenBrief.scenes.map(scene => ({
-    voice_settings: {
-      type: 'text',
-      input_text: scene.script,
-      voice_id: 'en-US-Neural2-F', // update with your preferred voice
-      speed: 1.0
-    },
-    avatar_settings: {
-      avatar_id: process.env.HEYGEN_AVATAR_ID || 'default',
-      scale: 1.0,
-      background: getBackground(heygenBrief.background)
-    },
-    duration: getDuration(scene.start_time, scene.end_time)
-  }));
+  console.log('[HeyGen] Generating video...');
 
   try {
-    const res = await axios.post(`${HEYGEN_BASE}/v2/video/generate`, {
-      video_inputs: scenes,
-      dimension: { width: 1080, height: 1920 }, // 9:16 for Reels/Shorts
-      caption: true
-    }, {
-      headers: {
-        'X-Api-Key': process.env.HEYGEN_API_KEY,
-        'Content-Type': 'application/json'
+    // Create video task
+    const response = await axios.post(
+      'https://api.heygen.com/v1/video/generate',
+      {
+        video_inputs: [
+          {
+            character: {
+              type: 'avatar',
+              avatar_id: AVATAR_ID,
+              avatar_style: 'normal'
+            },
+            voice: {
+              type: 'text',
+              input_text: script,
+              voice_id: '2d5b4e85ed5141cf9e675c6e3c4c0eaa' // Indian English voice
+            },
+            background: {
+              type: 'color',
+              value: '#050d1f'
+            }
+          }
+        ],
+        dimension: {
+          width: 1080,
+          height: 1920
+        },
+        aspect_ratio: '9:16',
+        resolution = '720p'
+      },
+      {
+        headers: {
+          'Authorization': 'Bearer ' + HEYGEN_KEY,
+          'Content-Type': 'application/json'
+        }
       }
-    });
+    );
 
-    console.log(`[HeyGen] Video submitted — ID: ${res.data.data.video_id}`);
-    return { id: res.data.data.video_id, status: 'processing' };
+    const videoId = response.data.data.video_id;
+    console.log('[HeyGen] Video started! ID:', videoId);
+
+    // Poll for completion
+    const videoUrl = await pollForVideo(videoId);
+
+    console.log('[HeyGen] Video ready:', videoUrl);
+    return { success: true, videoId, videoUrl };
+
   } catch (err) {
-    console.error('[HeyGen] Submit error:', err.response?.data || err.message);
-    return { id: null, status: 'error', error: err.message };
+    console.error('[HeyGen] Error:', err.response?.data || err.message);
+    return { success: false, error: err.message };
   }
 }
 
-async function pollVideoStatus(videoId) {
-  if (!process.env.HEYGEN_API_KEY || videoId === 'mock_video_id') {
-    return { status: 'skipped', url: null };
+async function pollForVideo(videoId, maxAttempts = 60) {
+  console.log('[HeyGen] Polling for video...');
+
+  for (let i = 0; i < maxAttempts; i++) {
+    await sleep(5000);
+
+    try {
+      const status = await axios.get(
+        `https://api.heygen.com/v1/video_status.get?video_id=${videoId}`,
+        {
+          headers: { 'Authorization': 'Bearer ' + HEYGEN_KEY }
+        }
+      );
+
+      const data = status.data.data;
+      console.log(`[HeyGen] Status: ${data.status}`);
+
+      if (data.status === 'completed') {
+        return data.video_url;
+      } else if (data.status === 'failed') {
+        throw new Error('Video generation failed');
+      }
+    } catch (err) {
+      console.error('[HeyGen] Poll error:', err.message);
+    }
   }
 
-  try {
-    const res = await axios.get(`${HEYGEN_BASE}/v1/video_status.get?video_id=${videoId}`, {
-      headers: { 'X-Api-Key': process.env.HEYGEN_API_KEY }
-    });
-
-    const { status, video_url } = res.data.data;
-    return { status, url: video_url };
-  } catch (err) {
-    console.error('[HeyGen] Poll error:', err.message);
-    return { status: 'error', url: null };
-  }
+  throw new Error('Video timeout');
 }
 
-// Poll until video is ready — max 10 minutes
-async function waitForVideo(videoId, maxWaitMs = 600000) {
-  const start = Date.now();
-  while (Date.now() - start < maxWaitMs) {
-    const result = await pollVideoStatus(videoId);
-    if (result.status === 'completed' || result.status === 'skipped') return result;
-    if (result.status === 'failed' || result.status === 'error') return result;
-    console.log(`[HeyGen] Waiting for video ${videoId}... status: ${result.status}`);
-    await sleep(30000); // poll every 30 seconds
-  }
-  return { status: 'timeout', url: null };
+async function generateFromScript(scriptContent, title) {
+  // Extract the script for HeyGen
+  const heyenScript = scriptContent
+    .replace(/\*\*/g, '')
+    .replace(/#/g, '')
+    .trim()
+    .slice(0, 500); // Limit for HeyGen
+
+  return await generateVideo(heyenScript, { title });
 }
 
-function getBackground(type) {
-  const backgrounds = {
-    classroom: { type: 'image', url: 'https://files.heygen.ai/bg/classroom.jpg' },
-    white: { type: 'color', value: '#FFFFFF' },
-    dark_tech: { type: 'color', value: '#0A0A1A' }
-  };
-  return backgrounds[type] || backgrounds.white;
+function sleep(ms) {
+  return new Promise(resolve => setTimeout(resolve, ms));
 }
 
-function getDuration(start, end) {
-  // Parse "0:08" → seconds
-  const toSec = t => {
-    const [m, s] = t.split(':').map(Number);
-    return m * 60 + s;
-  };
-  return toSec(end) - toSec(start);
-}
-
-function sleep(ms) { return new Promise(r => setTimeout(r, ms)); }
-
-module.exports = { submitVideo, waitForVideo };
+module.exports = {
+  generateVideo,
+  generateFromScript
+};
