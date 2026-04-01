@@ -31,36 +31,58 @@ async function complete(options) {
     ? [systemMsg, ...messages]
     : messages;
 
-  try {
-    const response = await axios.post(
-      `${GROQ_BASE}/chat/completions`,
-      {
-        model,
-        messages: formattedMessages,
-        max_tokens,
-        temperature,
-        response_format: undefined
-      },
-      {
-        headers: {
-          'Authorization': `Bearer ${process.env.GROQ_API_KEY}`,
-          'Content-Type': 'application/json'
-        },
-        timeout: 60000
-      }
-    );
+  // Retry logic for rate limits
+  const maxRetries = 5;
+  let lastError;
 
-    return {
-      content: response.data.choices?.[0]?.message?.content || '',
-      usage: response.data.usage,
-      model: response.data.model,
-      provider: 'groq'
-    };
-  } catch (err) {
-    const errorMsg = err.response?.data?.error?.message || err.message;
-    console.error('[Groq] Error:', errorMsg);
-    throw new Error(`Groq API error: ${errorMsg}`);
+  for (let attempt = 0; attempt < maxRetries; attempt++) {
+    try {
+      const response = await axios.post(
+        `${GROQ_BASE}/chat/completions`,
+        {
+          model,
+          messages: formattedMessages,
+          max_tokens,
+          temperature,
+          response_format: undefined
+        },
+        {
+          headers: {
+            'Authorization': `Bearer ${process.env.GROQ_API_KEY}`,
+            'Content-Type': 'application/json'
+          },
+          timeout: 60000
+        }
+      );
+
+      return {
+        content: response.data.choices?.[0]?.message?.content || '',
+        usage: response.data.usage,
+        model: response.data.model,
+        provider: 'groq'
+      };
+    } catch (err) {
+      const errorData = err.response?.data?.error;
+      const errorMsg = errorData?.message || err.message;
+      
+      // Check for rate limit
+      if (errorData?.type === 'rate_limit_exceeded') {
+        const retryAfter = errorData?.retry_details?.retry_after_ms || 3000;
+        console.log(`[Groq] Rate limited. Waiting ${Math.ceil(retryAfter/1000)}s... (attempt ${attempt + 1}/${maxRetries})`);
+        await sleep(Math.max(retryAfter, 3000));
+        lastError = errorMsg;
+        continue;
+      }
+      
+      throw new Error(`Groq API error: ${errorMsg}`);
+    }
   }
+  
+  throw new Error(`Groq API error after ${maxRetries} retries: ${lastError}`);
+}
+
+function sleep(ms) {
+  return new Promise(resolve => setTimeout(resolve, ms));
 }
 
 function listModels() {

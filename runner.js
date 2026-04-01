@@ -114,8 +114,8 @@ Produce the weekly strategy brief.
 
   const strategyBrief = JSON.stringify(results.strategy, null, 2);
 
-  const [content, ads, seo] = await Promise.all([
-    runAgent('content', `
+  // Run sequentially to respect Groq rate limits
+  results.content = await runAgent('content', `
 WEEKLY STRATEGY BRIEF:
 ${strategyBrief}
 
@@ -124,8 +124,10 @@ ${research.trending_topics}
 ${research.viral_hooks}
 
 Produce today's content output.
-    `),
-    runAgent('ads', `
+  `);
+  await delay(8000); // Wait between requests for rate limit
+
+  results.ads = await runAgent('ads', `
 WEEKLY STRATEGY BRIEF:
 ${strategyBrief}
 
@@ -135,8 +137,10 @@ ${research.meta_ad_trends}
 Current CPL data: ${lastMetrics ? `Rs.${lastMetrics.funnel?.cpl?.actual || 'unknown'}` : 'No data yet'}
 
 Produce 3 ad copy variants.
-    `),
-    runAgent('seo', `
+  `);
+  await delay(8000);
+
+  results.seo = await runAgent('seo', `
 WEEKLY STRATEGY BRIEF:
 ${strategyBrief}
 
@@ -145,32 +149,29 @@ ${research.youtube_trending}
 ${research.trending_topics}
 
 Produce this week's YouTube + SEO content package.
-    `)
-  ]);
+  `);
+  await delay(8000);
 
-  results.content = content;
-  results.ads = ads;
-  results.seo = seo;
-
-  const [reelProduction, shortProduction] = await Promise.all([
-    runAgent('producer', `
+  results.reelProduction = await runAgent('producer', `
 FORMAT THIS REEL SCRIPT FOR HEYGEN:
-${JSON.stringify(content.reel, null, 2)}
+${JSON.stringify(results.content.reel, null, 2)}
 Platform: Instagram Reel
 Duration: 60 seconds
-    `),
-    runAgent('producer', `
+  `);
+  await delay(8000);
+
+  results.shortProduction = await runAgent('producer', `
 FORMAT THIS YOUTUBE SHORT FOR HEYGEN:
-${JSON.stringify(content.shorts_script, null, 2)}
+${JSON.stringify(results.content.shorts_script, null, 2)}
 Platform: YouTube Short
 Duration: 45 seconds
-    `)
-  ]);
-
-  results.reelProduction = reelProduction;
-  results.shortProduction = shortProduction;
+  `);
 
   return results;
+}
+
+function delay(ms) {
+  return new Promise(resolve => setTimeout(resolve, ms));
 }
 
 async function runAnalytics(metricsData) {
