@@ -10,11 +10,12 @@ const headers = {
   'Content-Type': 'application/json'
 };
 
-// Notion page mapping - NEW clean pages
+// Notion page mapping - clean pages
 const PAGE_MAP = {
   '00-CREATOR-BRIEF.md':   '335133c5-aab8-81d3-89da-e9d751b33674',  // CREATOR BRIEF
   '01-WEEKLY-CALENDAR.md': '330133c5-aab8-81bb-a17c-d3b112247b89',  // WEEK 1 - Ready to Post
   '02-SCRIPTS.md':         '330133c5-aab8-81bb-a17c-d3b112247b89',  // Same page
+  '03-COMMAND-CENTER.md':  '330133c5-aab8-81dc-a6f0-d40e873068d5',  // Command Center
 };
 
 async function updateNotionPage(pageId, content, title) {
