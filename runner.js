@@ -1,44 +1,104 @@
 require('dotenv').config();
 const Anthropic = require('@anthropic-ai/sdk');
+const groq = require('./groq');
 const { AGENTS } = require('./agents');
 
-const client = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY });
+const anthropic = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY });
+
+const PROVIDERS = {
+  anthropic: {
+    name: 'Anthropic Claude',
+    models: ['claude-sonnet-4-5-20250929', 'claude-opus-4-5-20250929'],
+    defaultModel: 'claude-sonnet-4-5-20250929'
+  },
+  groq: {
+    name: 'Groq Llama',
+    models: ['llama-3.1-70b', 'llama-3.1-8b', 'mixtral-8x7b'],
+    defaultModel: 'llama-3.1-70b'
+  }
+};
+
+function getProvider() {
+  if (process.env.AI_PROVIDER === 'groq') {
+    return 'groq';
+  }
+  if (process.env.ANTHROPIC_API_KEY && process.env.ANTHROPIC_API_KEY.startsWith('sk-ant-')) {
+    return 'anthropic';
+  }
+  if (process.env.GROQ_API_KEY) {
+    console.log('[Runner] No Anthropic key found, using Groq...');
+    return 'groq';
+  }
+  return 'anthropic';
+}
 
 async function runAgent(agentKey, userMessage) {
   const agent = AGENTS[agentKey];
   if (!agent) throw new Error(`Unknown agent: ${agentKey}`);
 
-  console.log(`[Agent] Running ${agent.name}...`);
+  const provider = getProvider();
+  console.log(`[Agent] Running ${agent.name} via ${PROVIDERS[provider].name}...`);
 
-  const response = await client.messages.create({
+  let result;
+  if (provider === 'groq') {
+    result = await runGroq(agent, userMessage);
+  } else {
+    result = await runAnthropic(agent, userMessage);
+  }
+
+  return parseResult(result, agent.name);
+}
+
+async function runAnthropic(agent, userMessage) {
+  const response = await anthropic.messages.create({
     model: agent.model,
     max_tokens: 2000,
     system: agent.system,
     messages: [{ role: 'user', content: userMessage }]
   });
 
-  const raw = response.content[0].text;
+  return {
+    text: response.content[0].text,
+    provider: 'anthropic'
+  };
+}
 
-  // Parse JSON — strip markdown fences if present
+async function runGroq(agent, userMessage) {
+  const model = process.env.GROQ_MODEL || 'llama-3.1-70b';
+  
+  const response = await groq.complete({
+    model,
+    system: agent.system,
+    messages: [{ role: 'user', content: userMessage }],
+    max_tokens: 2000,
+    temperature: 0.7
+  });
+
+  return {
+    text: response.content,
+    provider: 'groq'
+  };
+}
+
+function parseResult(result, agentName) {
+  const raw = result.text;
+
   let parsed;
   try {
     const clean = raw.replace(/```json\n?/g, '').replace(/```\n?/g, '').trim();
     parsed = JSON.parse(clean);
   } catch (e) {
-    console.warn(`[Agent] ${agent.name} returned non-JSON — using raw text`);
+    console.warn(`[Agent] ${agentName} returned non-JSON - using raw text`);
     parsed = { raw };
   }
 
-  console.log(`[Agent] ${agent.name} complete`);
+  console.log(`[Agent] ${agentName} complete (${result.provider})`);
   return parsed;
 }
-
-// ── Pipeline steps ────────────────────────────────────────────────
 
 async function runWeeklyPipeline(research, lastMetrics) {
   const results = {};
 
-  // Step 1: Strategist reads research + metrics → produces brief
   const strategistInput = `
 PERPLEXITY RESEARCH THIS WEEK:
 Trending topics: ${research.trending_topics}
@@ -46,17 +106,15 @@ Competitor content: ${research.competitor_content}
 Viral hooks: ${research.viral_hooks}
 
 LAST WEEK METRICS:
-${lastMetrics ? JSON.stringify(lastMetrics, null, 2) : 'No metrics yet — first run.'}
+${lastMetrics ? JSON.stringify(lastMetrics, null, 2) : 'No metrics yet - first run.'}
 
 Produce the weekly strategy brief.
   `;
   results.strategy = await runAgent('strategist', strategistInput);
 
-  // Step 2–5: Run content, ads, SEO, nurture in parallel with strategy brief
   const strategyBrief = JSON.stringify(results.strategy, null, 2);
 
   const [content, ads, seo] = await Promise.all([
-
     runAgent('content', `
 WEEKLY STRATEGY BRIEF:
 ${strategyBrief}
@@ -67,7 +125,6 @@ ${research.viral_hooks}
 
 Produce today's content output.
     `),
-
     runAgent('ads', `
 WEEKLY STRATEGY BRIEF:
 ${strategyBrief}
@@ -75,11 +132,10 @@ ${strategyBrief}
 META AD TRENDS FROM RESEARCH:
 ${research.meta_ad_trends}
 
-Current CPL data: ${lastMetrics ? `₹${lastMetrics.funnel?.cpl?.actual || 'unknown'}` : 'No data yet'}
+Current CPL data: ${lastMetrics ? `Rs.${lastMetrics.funnel?.cpl?.actual || 'unknown'}` : 'No data yet'}
 
 Produce 3 ad copy variants.
     `),
-
     runAgent('seo', `
 WEEKLY STRATEGY BRIEF:
 ${strategyBrief}
@@ -96,16 +152,13 @@ Produce this week's YouTube + SEO content package.
   results.ads = ads;
   results.seo = seo;
 
-  // Step 6: Producer formats content + seo for HeyGen
   const [reelProduction, shortProduction] = await Promise.all([
-
     runAgent('producer', `
 FORMAT THIS REEL SCRIPT FOR HEYGEN:
 ${JSON.stringify(content.reel, null, 2)}
 Platform: Instagram Reel
 Duration: 60 seconds
     `),
-
     runAgent('producer', `
 FORMAT THIS YOUTUBE SHORT FOR HEYGEN:
 ${JSON.stringify(content.shorts_script, null, 2)}
@@ -142,4 +195,4 @@ Produce the WhatsApp message for this lead's current stage.
   `);
 }
 
-module.exports = { runAgent, runWeeklyPipeline, runAnalytics, runLeadNurture };
+module.exports = { runAgent, runWeeklyPipeline, runAnalytics, runLeadNurture, PROVIDERS, getProvider };
